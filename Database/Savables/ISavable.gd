@@ -1,6 +1,8 @@
 class_name ISavable extends Node
 
+@warning_ignore("unused_private_class_variable")
 var _server:bool
+@warning_ignore("unused_private_class_variable")
 var _path:String
 var id:int
 ## how much it has been loaded
@@ -8,18 +10,18 @@ var id:int
 ## 1 partly
 ## 2 fully
 var partly_loaded:int
-#region define:
+#region savable
 #func copy():					# copy the class which is used by savable when new needs to be created
 	#return UnwelcomeMac.new()
-#func partly_save():			# only part save
-	#pass
-#func fully_save():				# full save
-	#pass
-#func partly_load():			# load only critical data
-	#pass
-#func fully_load():				# fully load
-	#pass	
-#endregion
+func partly_save():			# only part save
+	pass
+func fully_save():				# full save
+	pass
+func partly_load():			# load only critical data
+	pass
+func fully_load():				# fully load
+	pass
+#endregion savable
 
 
 #public long idFather { get; set; }
