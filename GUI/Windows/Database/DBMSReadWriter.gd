@@ -1,7 +1,15 @@
 class_name DBMSReadWriter extends Node
 
 func _ready():
-	get_parent().set_id_window(100, "database")
+	# just so it populates the database
+	push_warning("DataBase.new() shouldn't be here it should be at your starter script to populate the database and if you want to save id window simply uncomment #get_parent().set_id_window(100, database)")
+	#DataBase.new()
+	# you can poppulate database like this or within your game but it's not recommended to do it more than once
+	
+	# to make this line work you need to add window manager to DataBase so parent of DBMS
+	# note you'll need to set global canvas in starter script
+	#get_parent().set_id_window(100, "database")
+	g_man.database_reader = self
 	var table = DataBase.Table.new("myDBMSviuer")
 	table.create_column(false, "DBMS", DataBase.DataType.LONG, 1, "id")
 	table.create_column(false, "DBMS", DataBase.DataType.STRING, 120, "dbms_root")
@@ -20,14 +28,13 @@ var client_tab:TabContainer
 
 signal on_insert
 
-func _input(event):
-	if event.is_action_pressed("dataBase"):
-		get_parent().last_sibling()
-		get_parent().show()
+func show_window():
+	get_parent().last_sibling()
+	get_parent().show()
 
-const GUI_SERVER_CLIENT_TAB = preload("res://GUI/Windows/Database/GUIServerClientTab.tscn")
-@onready var root_text = $"DBMSRootText/header container/root text/root text"
-@onready var data_base_table_container = $MarginContainer/DataBaseTableContainer
+const GUI_SERVER_CLIENT_TAB = preload("res://GUI/Windows/Database/gui_server_client_tab.tscn")
+@export var root_text: LineEdit
+@export var data_base_table_container: TabContainer
 
 func _on_root_text_submit(new_text):
 	destroy_tables()
@@ -67,8 +74,8 @@ func show_all_tables():
 		server_tab.tab_clicked.connect(_on_database_server_table_container_tab_clicked)
 		subDirs = DirAccess.get_directories_at(server_path)
 		for item in subDirs:
-			var tableName = item
-			OpenTable(true, tableName)
+			var table_name = item
+			OpenTable(true, table_name)
 	# load all client tables:
 	var client_path = String("{path}/{client}").format({path = database_path, client = client})
 	if DirAccess.dir_exists_absolute(client_path):
@@ -78,25 +85,25 @@ func show_all_tables():
 		client_tab.tab_clicked.connect(_on_database_client_table_container_tab_clicked)
 		subDirs = DirAccess.get_directories_at(client_path)
 		for item in subDirs:
-			var tableName = item
-			OpenTable(false, tableName)
+			var table_name = item
+			OpenTable(false, table_name)
 
 const TABLE = preload("res://GUI/Windows/Database/table.tscn")
 
-func OpenTable(server:bool, tableName:String):
+func OpenTable(server:bool, table_name:String):
 	var table_tab = TABLE.instantiate()
 	if server:
 		server_tab.add_child(table_tab)
 	else:
 		client_tab.add_child(table_tab)
-	table_tab.name = tableName
+	table_tab.name = table_name
 	# add button to the list for removal reference
 	if server:
 		list_server_table_names.push_back(table_tab)
 	else:
 		list_client_table_names.push_back(table_tab)
 	table_tab.server = server
-	table_tab.table_name = tableName
+	table_tab.table_name = table_name
 	table_tab.path = database_path
 	table_tab.dbms = self
 	
@@ -142,16 +149,16 @@ func DatabaseDoesNotExists(actually):
 	#region Path
 #const metaDataLength = 5
 
-static func path(server : bool, DataBaseDir : String, tableNamePath : String):
-	var fullPath
+static func path(server : bool, database_dir : String, table_name_path : String):
+	var full_path
 	if server:
-		fullPath = String("{base}/sun/{path}".format({base = DataBaseDir, path = tableNamePath}))
+		full_path = String("{base}/sun/{path}".format({base = database_dir, path = table_name_path}))
 	else:
-		fullPath = String("{base}/planet/{path}".format({base = DataBaseDir, path = tableNamePath}))
-	return fullPath
+		full_path = String("{base}/planet/{path}".format({base = database_dir, path = table_name_path}))
+	return full_path
 	#endregion Path
 	#region file not overwriting
-static func file_create_or_read_or_write(file_path, file_mode : FileAccess.ModeFlags):
+static func file_create_or_read_or_write(file_path, file_mode : FileAccess.ModeFlags = FileAccess.ModeFlags.READ):
 	if(file_mode == FileAccess.READ):
 		if FileAccess.file_exists(file_path):
 			return FileAccess.open(file_path, file_mode)
@@ -168,31 +175,31 @@ static func file_create_or_read_or_write(file_path, file_mode : FileAccess.ModeF
 		return file
 	#endregion file not overwriting
 	#region dir exists
-static func directory_exists(server : bool, dataBaseDir, tableName, columnName):
-	var _path = path(server, dataBaseDir, tableName)
-	if not DirAccess.dir_exists_absolute(String("{_path}").format({_path = _path, column = columnName})):
-		printerr(String("directory doesn't exist server[{server}] table name[{tableName}] column[{columnName}]\n").format({server = server, tableName = tableName, columnName = columnName}))
+static func directory_exists(server : bool, database_dir, table_name, column_name):
+	var _path = path(server, database_dir, table_name)
+	if not DirAccess.dir_exists_absolute(String("{_path}").format({_path = _path, column = column_name})):
+		printerr(String("directory doesn't exist server[{server}] table name[{table_name}] column[{column_name}]\n").format({server = server, table_name = table_name, column_name = column_name}))
 		return ""
-	return String("{path}/{columnName}").format({path = _path, columnName = columnName})
+	return String("{path}/{column_name}").format({path = _path, column_name = column_name})
 	#endregion dir exists
 #endregion file system
 #region select
-static func select(server: bool, dataBaseDir, tableName, columnName, id: int):
-		var fileName = directory_exists(server, dataBaseDir, tableName, columnName)
-		if fileName == "":
-			push_error(String("table does not exists: {tableName}\ncolumn: {columnName}").format({tableName = tableName, columnName = columnName}))
+static func select(server: bool, database_dir, table_name, column_name, id: int):
+		var file_name = directory_exists(server, database_dir, table_name, column_name)
+		if file_name == "":
+			push_error(String("table does not exists: {table_name}\ncolumn: {column_name}").format({table_name = table_name, column_name = column_name}))
 			return
-		if not FileAccess.file_exists(fileName):
-			push_error("table: ", tableName, " file: ", columnName, " doesn't exist")
+		if not FileAccess.file_exists(file_name):
+			push_error("table: ", table_name, " file: ", column_name, " doesn't exist")
 		#we load intengrety of files in this path
 		var intengrety = -1
-		var _path = path(server, dataBaseDir, tableName)
+		var _path = path(server, database_dir, table_name)
 		_path += '/'
 		#read length
-		var metaData = DataBase.get_header(fileName)
-		if metaData == null:
+		var meta_data = DataBase.get_header(file_name)
+		if meta_data == null:
 			return
-		var length = metaData[0]
+		var length = meta_data[0]
 		intengrety = DataBase.load_back(_path, intengrety)
 		#Save backedUp file that we didn't save correctly to disc but to the bakedUpFile
 		if intengrety == 2:
@@ -200,40 +207,44 @@ static func select(server: bool, dataBaseDir, tableName, columnName, id: int):
 		
 		##read file section
 		#get to the id section
-		var dataLength = DataBase.get_data_length(metaData[1], length)
+		var dataLength = DataBase.get_data_length(meta_data[1], length, meta_data[2], meta_data[3])
 		
-		if not FileAccess.file_exists(fileName):
+		if not FileAccess.file_exists(file_name):
 			return
-		var fileAccess = FileAccess.open(fileName, FileAccess.READ)
-		fileAccess.seek(dataLength * id)
+		var file_access = FileAccess.open(file_name, FileAccess.READ)
+		file_access.seek(dataLength * id)
 		# needs to read 4 bytes more than it is needed to the process is skipped in the end
-		var buffer = fileAccess.get_buffer(dataLength+4)
+		var buffer = file_access.get_buffer(dataLength+4)
 
-		fileAccess.close()
+		file_access.close()
 		if buffer.size() == 0:
 			return
-		if not DataBase.type_check(buffer[0], metaData[1]):
+		if not DataBase.type_check(buffer[0], meta_data[1]):
 			return
 		var text = bytes_to_var(buffer)
 		return text
 		
-static func last_id(server: bool, dataBaseDir, tableName, columnName):
-	var fileName = directory_exists(server, dataBaseDir, tableName, columnName)
-	if fileName == "":
-		printerr(String("table does not exists: {tableName}\ncolumn: {columnName}").format({tableName = tableName, columnName = columnName}))
+static func last_id(server: bool, database_dir, table_name, column_name, absolute: bool = true):
+	var file_name = ""
+	if absolute:
+		file_name = directory_exists(server, database_dir, table_name, column_name)
+	else:
+		file_name = DataBase.directory_exists(server, database_dir, table_name, column_name)
+	if file_name == "":
+		printerr(String("table does not exists: {table_name}\ncolumn: {column_name}").format({table_name = table_name, column_name = column_name}))
 		return
 	#we load intengrety of files in this path
 	var intengrety = -1
-	var _path = path(server, dataBaseDir, tableName)
+	var _path = path(server, database_dir, table_name)
 	_path += '/'
 	
 	#read length
-	var fileAccess = FileAccess.open(fileName, FileAccess.READ)
-	var metaData = DataBase.get_header(fileName)
-	if metaData == null:
-		fileAccess.close()
+	var file_access = FileAccess.open(file_name, FileAccess.READ)
+	var meta_data = DataBase.get_header(file_name)
+	if meta_data == null:
+		file_access.close()
 		return 0
-	var length = metaData[0]
+	var length = meta_data[0]
 	
 	intengrety = DataBase.load_back(path, intengrety)
 	#Save backedUp file that we didn't save correctly to disc but to the bakedUpFile
@@ -242,74 +253,74 @@ static func last_id(server: bool, dataBaseDir, tableName, columnName):
 	
 	##read file section
 	#get to the id section
-	var dataLength = DataBase.get_data_length(metaData[1], length)
+	var dataLength = DataBase.get_data_length(meta_data[1], length, meta_data[2], meta_data[3])
 	var totalLength = 0
-	if FileAccess.file_exists(fileName):
-		totalLength = fileAccess.get_length()
+	if FileAccess.file_exists(file_name):
+		totalLength = file_access.get_length()
 	@warning_ignore("integer_division")
 	var idCount = (totalLength) / dataLength
-	if fileAccess:
-		fileAccess.close()
+	if file_access:
+		file_access.close()
 	return idCount
 #endregion select
 #region insert
-## server, dataBaseDir, tableName, columnName, id, data, oper
-static func insert(server : bool, dataBaseDir : String, tableName, columnName, id: int, data, _oper = "equals"):
-	#if id < 1:
-		#printerr("id is less than 1 it should never be 0 is ment for null", get_stack())
-		#return
+## server, database_dir, table_name, column_name, id, data, oper
+static func insert(server : bool, database_dir : String, table_name, column_name, id: int, data, _oper = "equals"):
 	if(data == null):
 		push_error("data is null")
 		return
-	var _path = path(server, dataBaseDir, tableName)
-	var fileName = directory_exists(server, dataBaseDir, tableName, columnName)
-	if not FileAccess.file_exists(String("{fileName}.meta").format({fileName = fileName})):
-		printerr(String("Exception fileName: {fileName}.meta does not exist\n").format({fileName = columnName}), get_stack())
+	var _path = path(server, database_dir, table_name)
+	var file_name = directory_exists(server, database_dir, table_name, column_name)
+	if not FileAccess.file_exists(String("{file_name}.meta").format({file_name = file_name})):
+		printerr(String("Exception file_name: {file_name}.meta does not exist\n").format({file_name = column_name}), get_stack())
 		return
 	# started creating a file
 	DataBase.save_back(path, 1)
 	# read column config
 	var length
 	var converted
-	var fileAccess = file_create_or_read_or_write(fileName, FileAccess.READ_WRITE)
-	var metaData = DataBase.get_header(fileName)
-	length = metaData[0]
+	var file_access = file_create_or_read_or_write(file_name, FileAccess.READ_WRITE)
+	var meta_data = DataBase.get_header(file_name)
+	length = meta_data[0]
 	if length == 0:
-		printerr(String("something is wrong {fileName}").format({fileName = fileName}), get_stack())
+		push_error(String("something is wrong {file_name}").format({file_name = file_name}), get_stack())
 		return
-	var dataLength = DataBase.get_data_length(metaData[1], length)
+	var dataLength = DataBase.get_data_length(meta_data[1], length, meta_data[2], meta_data[3])
 	#convert data to bytes
+	if data is Array || data is PackedByteArray:
+		if len(data) > length:
+			data = data.slice(0, length)
 	converted = var_to_bytes(data)
-	if not DataBase.type_check(converted[0], metaData[1]):
+	if not DataBase.type_check(converted[0], meta_data[1]):
 		return
 	##4 in front because it is type variable saved with it
-	if converted.size() > dataLength:
-		if length > 1:
-			converted[4] = length
-		converted = converted.slice(0, dataLength)
+	#if converted.size() > dataLength:
+		#if length > 1:
+			#converted[4] = length
+		#converted = converted.slice(0, dataLength)
+		
+		
+		
 	#save to backeup
-	DataBase.save_back_data(_path, columnName, metaData[1], length, id, converted)
+	DataBase.save_back_data(_path, column_name, meta_data[1], length, meta_data[2], id, converted, meta_data[3])
 	#backeup has been sucessfully written
 	_path += "/"
 	DataBase.save_back(_path, 2)
 	
 	#saved permenantly
-	fileAccess.seek(id * dataLength)
-	fileAccess.store_buffer(converted)
+	file_access.seek(id * dataLength)
+	file_access.store_buffer(converted)
 	
 	#read if end of file
-	var total_length = fileAccess.get_length()
+	var total_length = file_access.get_length()
 	@warning_ignore("integer_division")
-	if total_length / dataLength >= id:
+	if (total_length / dataLength) <= id:
 	#write 4 more bytes for string to read properly else it reads nothing if it comes to eof
-		fileAccess.store_32(0)
-	fileAccess.close()
+		file_access.store_32(0)
+	file_access.close()
 	DataBase.save_back(path, 0)
 #endregion insert
 
 
 func _on_exit():
 	get_parent().hide()
-
-
-

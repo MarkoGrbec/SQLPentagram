@@ -1,7 +1,7 @@
 class_name GUIColumn extends Node
 
 const CELL = preload("res://GUI/Windows/Database/cell.tscn")
-@onready var attribute_label = $"attribute label"
+@export var attribute_label: Label
 
 var dbms
 var server
@@ -24,7 +24,7 @@ func instantiate_all_cells():
 		return
 	# get last id of the attribute file
 	var count = DBMSReadWriter.last_id(server, database_path, table_name, column_name)
-	for i in range(0, count):
+	for i in range(0, count + 1):
 		var cell_tran = CELL.instantiate()
 		add_child(cell_tran)
 		cell_tran.dbms = dbms

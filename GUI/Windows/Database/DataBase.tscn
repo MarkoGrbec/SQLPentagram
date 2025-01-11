@@ -1,7 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://tgh8wetjjcqm"]
+[gd_scene load_steps=2 format=3 uid="uid://tgh8wetjjcqm"]
 
-[ext_resource type="Script" path="res://GUI/Windows/resize/WindowManager.gd" id="1_db4fg"]
-[ext_resource type="Script" path="res://GUI/Windows/Database/DBMSReadWriter.gd" id="1_qjjli"]
+[ext_resource type="Script" uid="uid://byw0meqedoq66" path="res://GUI/Windows/Database/DBMSReadWriter.gd" id="1_qjjli"]
 
 [node name="DataBase" type="Control"]
 layout_mode = 3
@@ -10,9 +9,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_db4fg")
 
-[node name="DBMS" type="VBoxContainer" parent="."]
+[node name="DBMS" type="VBoxContainer" parent="." node_paths=PackedStringArray("root_text", "data_base_table_container")]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,6 +18,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_qjjli")
+root_text = NodePath("DBMSRootText/header container/root text/root text")
+data_base_table_container = NodePath("MarginContainer/ScrollContainer/DataBaseTableContainer")
 
 [node name="DBMSRootText" type="MarginContainer" parent="DBMS"]
 custom_minimum_size = Vector2(0, 64)
@@ -55,8 +55,13 @@ text = "X"
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="DataBaseTableContainer" type="TabContainer" parent="DBMS/MarginContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="DBMS/MarginContainer"]
 layout_mode = 2
+
+[node name="DataBaseTableContainer" type="TabContainer" parent="DBMS/MarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
 [connection signal="text_submitted" from="DBMS/DBMSRootText/header container/root text/root text" to="DBMS" method="_on_root_text_submit"]
 [connection signal="pressed" from="DBMS/DBMSRootText/header container/save/save" to="DBMS" method="save_data"]
